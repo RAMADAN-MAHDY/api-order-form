@@ -1,0 +1,23 @@
+{
+  "name": "api_order_form",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "http": "^0.0.1-security",
+    "mongoos": "^0.0.1-security",
+    "mongoose": "^8.4.0",
+    "socket.io": "^4.7.5",
+    "ws": "^8.17.0"
+  }
+}
