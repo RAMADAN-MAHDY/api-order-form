@@ -203,9 +203,9 @@ app.get("/condition/:id" , async(req,res)=>{
 })
 
 
-app.get('/condition', async (req, res) => {
+app.get('/user', async (req, res) => {
   try {
-    const conditions = await Conditions.find();
+    const conditions = await User.find();
     res.json(conditions);
   } catch (error) {
     res.status(500).json({ error: 'Failed to retrieve conditions' });
