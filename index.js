@@ -6,35 +6,42 @@ import bcrypt from 'bcrypt';
 import cors from 'cors';
 import { createServer } from 'node:http';
 import { Server } from "socket.io";
-
+import Notification from './chsma/notification.js';
 const app = express()
 const port = 5000;
 
 const server = createServer(app);
 const io = new Server(server,{
     cors:{
-        origin:'https://royal-corner.vercel.app'
+        origin:'http://localhost:3000'
     }
 });
 
   
   app.use(cors());
   
-io.on('connection', (socket) => {
+  io.on('connection', async (socket) => {
     console.log('عميل متصل');
 
-    // استمع لرسائل العميل
+    // إرسال الإشعارات غير المقروءة
+    const notifications = await Notification.find({ seenBy: { $ne: socket.id } });
+    socket.emit('unseen-notifications', notifications);
+
+    socket.on('notification-seen', async (notificationId) => {
+        await Notification.findByIdAndUpdate(notificationId, { $addToSet: { seenBy: socket.id } });
+    });
+
+
     socket.on('message', (data) => {
         console.log('رسالة جديدة:', data);
-        // إرسال الرسالة إلى جميع العملاء
         io.emit('message', data);
     });
 
-    // استمع لفصل العميل
     socket.on('disconnect', () => {
         console.log('عميل مفصول');
     });
 });
+
 
 app.use((req, res, next) => {
     const contentLength = parseInt(req.get('content-length'), 10);
@@ -114,7 +121,15 @@ app.post('/condition', async (req, res) => {
             // إذا لم يكن السجل موجودًا، قم بإنشاء سجل جديد
             await Conditions.create({ code, name, conditions: [stateDetail] });
         }
+
+
+       const notification = new Notification({
+            message: `تمت إضافة حالة جديدة بكود ${code}`,
+        });
+        await notification.save();
+
         io.emit('new-condition', { code });
+
 
         res.status(200).json({ message: 'تمت إضافة تفاصيل الحالة بنجاح' });
     } catch (error) {
