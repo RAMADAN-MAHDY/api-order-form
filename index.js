@@ -1,234 +1,164 @@
-import express from 'express';
-import connectDB from './db.js';
-import Conditions from './chsma/condition.js';
-import User from './chsma/createuser.js';
-import bcrypt from 'bcrypt';
-import cors from 'cors';
-import { createServer } from 'node:http';
-import { Server } from "socket.io";
-import Notification from './chsma/notification.js';
-const app = express()
-const port = 5000;
+'use client';
+import { useState, useEffect, useMemo } from 'react';
+import { AiFillFrown, AiFillSmile } from "react-icons/ai";
+import Notec from '@/app/componant/notec';
+import io from 'socket.io-client';
+import Link from 'next/link';
 
-const server = createServer(app);
-const io = new Server(server,{
-    cors:{
-        origin:'https://royal-corner.vercel.app'
-    }
-});
+const Admin = () => {
+    const [data, setData] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [searchInput, setSearchInput] = useState('');
+    const [newCondition, setNewCondition] = useState([]);
+    const [newConditionLength, setNewConditionLength] = useState(0);
+    const [notices, setNotices] = useState(false);
 
-  
-  io.on('connection', async (socket) => {
-    console.log('عميل متصل');
+    useEffect(() => {
+        const savedConditions = JSON.parse(localStorage.getItem('newCondition')) || [];
+        const savedLength = parseInt(localStorage.getItem('newConditionLength'), 10) || 0;
+        setNewCondition(savedConditions);
+        setNewConditionLength(savedLength);
+    }, []);
 
-    // إرسال الإشعارات غير المقروءة
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const response = await fetch('https://api-order-form.onrender.com/user');
+                const responseData = await response.json();
+                setData(responseData);
+                setIsLoading(false);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                setIsLoading(false);
+            }
+        };
+        fetchData();
+    }, []);
 
-    socket.on('message', (data) => {
-        console.log('رسالة جديدة:', data);
-        io.emit('message', data);
-    });
-
-    socket.on('disconnect', () => {
-        console.log('عميل مفصول');
-    });
-});
-
-app.use(cors());
-
-app.use((req, res, next) => {
-    const contentLength = parseInt(req.get('content-length'), 10);
-    console.log(`حجم البيانات: ${contentLength} bytes`);
-    next();
-  });
-  // زيادة الحد الأقصى لحجم البيانات المسموح به
-app.use(express.json({limit: '50mb'}));
-app.use(express.urlencoded({limit: '50mb', extended: true, parameterLimit: 50000}));
-connectDB();
-// app.use(express.json())
-//log in 
-app.post('/login',async (req,res)=>{
-try{
-const {email , password ,code} = req.body;
-const checkemail = await User.findOne({code});
-if(!checkemail){
-    return res.status(500).json("يرجي التاكد من الحساب واعادة المحاوله")
-}
-const ispasswordValid = await bcrypt.compare(password ,checkemail.password );
-
-if(!ispasswordValid){
-    return res.status(500).json("يرجي التاكد من الحساب واعادة المحاوله")
-}
-return res.status(200).json({ message: 'Login successful' });
-
-}catch(err){
-    return res.status(500).json("خطأ في التسجيل");
-}
-
-})
-
-
-//post account 
-app.post('/user',async (req,res)=>{
-try{
-    const {email, password , code} = req.body;
-
-    if (!email || !password || !code) {
-        return res.status(400).json({ message: "All fields are required." });
-    }
-    const checkemail =await User.findOne({email})
-    const checkecode =await User.findOne({code})
-    if(checkemail || checkecode){
-        return res.status(300).json("جرب حساب اخر ")
-    }
-    const hashedpassword = await bcrypt.hash(password , 10)
-    await User.create({email, password:hashedpassword , code})
-    return res.status(200).json("تم انشاء الحساب");
-
-}catch(err){
-   return res.status(500).json({message : err.message})
-}
-})
-
-
-//post conditon to conditions array
-app.post('/condition', async (req, res) => {
-    try {
-        const { name , code , stateDetail, } = req.body;
-        
-        if (!stateDetail) {
-            return res.status(400).json({ error: 'الحقول المطلوبة مفقودة' });
-        }
-
-        // إضافة الوقت الحالي إلى stateDetail
-        stateDetail.timestamp = new Date();
-
-        // البحث عن السجل الموجود باستخدام الكود
-        let existingCondition = await Conditions.findOne({ code });
-
-        if (existingCondition) {
-            // إذا كان السجل موجودًا، أضف stateDetail إلى الحقل conditions
-            existingCondition.conditions.push(stateDetail);
-            await existingCondition.save();
-        } else {
-            // إذا لم يكن السجل موجودًا، قم بإنشاء سجل جديد
-            await Conditions.create({ code, name, conditions: [stateDetail] });
-        }
-    
-        io.emit('new-condition', { code });
-
-        const notification = new Notification({
-            message: `تمت إضافة حالة جديدة بكود ${code}`,
+    useEffect(() => {
+        const socket = io('https://api-order-form.onrender.com');
+        socket.on('new-condition', (data) => {
+            setNewCondition(prevConditions => {
+                const updatedConditions = [...prevConditions, data];
+                localStorage.setItem('newCondition', JSON.stringify(updatedConditions));
+                return updatedConditions;
+            });
+            setNewConditionLength(prevLength => {
+                const updatedLength = prevLength + 1;
+                localStorage.setItem('newConditionLength', updatedLength.toString());
+                return updatedLength;
+            });
         });
-        await notification.save();
 
-        res.status(200).json({ message: 'تمت إضافة تفاصيل الحالة بنجاح' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
+        socket.on('unread-notifications', (data) => {
+            console.log('Received unseen notifications:', data);
+            setNewCondition(prevConditions => {
+                const updatedConditions = [...prevConditions, ...data];
+                localStorage.setItem('newCondition', JSON.stringify(updatedConditions));
+                return updatedConditions;
+            });
+            setNewConditionLength(prevLength => {
+                const updatedLength = prevLength + data.length;
+                localStorage.setItem('newConditionLength', updatedLength.toString());
+                return updatedLength;
+            });
+        });
 
-// put condition data 
-app.put('/condition/:code/:conditionId', async (req, res) => {
-    try {
-        const { code, conditionId } = req.params;
-        const { commitionreq } = req.body;
+        return () => {
+            socket.disconnect();
+        };
+    }, []);
 
-        if (!commitionreq) {
-            return res.status(400).json({ error: 'State is required.' });
-        }
+    const handleSearchInputChange = (event) => {
+        setSearchInput(event.target.value);
+    };
 
-        const condition = await Conditions.findOne({ code });
+    const filteredData = useMemo(() => {
+        if (!data) return [];
+        return data.filter((item) =>
+            item.code.toString().includes(searchInput) ||
+            item.email.toString().includes(searchInput)
+        );
+    }, [data, searchInput]);
 
-        if (!condition) {
-            return res.status(404).json('Condition not found');
-        }
+    const handleEmojiClick = () => {
+        setNotices(!notices);
+        localStorage.removeItem("newConditionLength");
+        setNewConditionLength(0);
+    };
 
-        const subCondition = condition.conditions.id(conditionId);
-        if (!subCondition) {
-            return res.status(404).json('Sub-condition not found');
-        }
+    return (
+        <div dir='rtl'>
+            <div className='flex justify-between'>
+                <input
+                    className='p-3 rounded-3xl m-3 sm:w-[200px] w-[100px] h-[30px] left-0'
+                    type="text"
+                    placeholder="ابحث بالكود أو الاسم"
+                    value={searchInput}
+                    onChange={handleSearchInputChange}
+                />
+                <h1 className='text-[#ffffff] sm:h-[50px] h-[40px] mb-3 sm:text-[24px] p-1 bg-[#c5c5c1] shadow-[0_35px_35px_rgba(3,3,3,1.25)]'> بسم الله الرحمن الرحيم</h1>
+                <div className="mb-3 h-[60px] self-center border border-gray-400 rounded-lg p-4 group hover:bg-white bg-gradient-to-br from-red-500 to-blue-500 via-green-500">
+                    <span className="h-[60px] bg-clip-text bg-gradient-to-br from-red-500 to-blue-500 via-green-500 text-[#fff] hover:text-white animate-pulse">
+                        Royal corner
+                    </span>
+                </div>
+            </div>
+            {newConditionLength > 0 ? (
+                <div className="relative top-[8px]">
+                    <AiFillSmile
+                        className='text-[#ddff00] w-[50px] h-[50px] bg-[#000] rounded-full'
+                        onClick={handleEmojiClick}
+                    />
+                    <p className="text-[#ffffff] text-[15px] w-[30px] h-[30px] pt-[0.3rem] pr-[0.75rem] rounded-full bg-[#ff1100] absolute top-[-9px] right-[40px]">
+                        {newConditionLength}
+                    </p>
+                </div>
+            ) : (
+                <div className="relative top-[8px]">
+                    <AiFillFrown
+                        className='text-[#ddff00] w-[50px] h-[50px] bg-[#000] rounded-full'
+                        onClick={() => setNotices(!notices)}
+                    />
+                </div>
+            )}
+            {notices && <Notec lengthpro={newCondition.map(item => item.code)} />}
+            {isLoading ? (
+                <div className="m-[40%] loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-32 w-32 p-3">
+                    <p className='p-3 m-3'>Loading</p>
+                </div>
+            ) : filteredData.length > 0 ? (
+                <div className="overflow-x-auto mr-3 mt-5">
+                    <table className="table-auto w-full border-collapse">
+                        <thead>
+                            <tr className='text-[#32ff46] bg-[#433]'>
+                                <th className="border border-gray-800 px-4 py-2">العدد</th>
+                                <th className="border border-gray-800 px-4 py-2">الاسم</th>
+                                <th className="border border-gray-800 px-4 py-2">الكود</th>
+                                <th className="border border-gray-800 px-4 py-2">عرض الطلبات</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {filteredData.map((dataItem) => (
+                                <tr key={dataItem.code}>
+                                    <td className="border border-gray-800 px-4 py-2">{} قيد لانشاء</td>
+                                    <td className="border border-gray-800 px-4 py-2">{dataItem.email}</td>
+                                    <td className="border border-gray-800 px-4 py-2">{dataItem.code}</td>
+                                    <td className="border border-gray-800 px-4 py-2">
+                                        <Link href={`/adminahmed/${dataItem.code}`}
+                                            className='bg-[#236a22] text-[#fff] p-2 rounded-3xl hover:bg-[#4cfa49]'>عرض الطلبات
+                                        </Link>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+            ) : (
+                <p>No data available</p>
+            )}
+        </div>
+    );
+};
 
-        subCondition.commitionreq = commitionreq;
-
-        await condition.save();
-
-        res.status(200).json(subCondition);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-// PUT condition data by code and conditionId
-app.put('/condition/state/:code/:conditionId', async (req, res) => {
-    try {
-        const { code, conditionId } = req.params;
-        const { state } = req.body;
-
-        if (!state) {
-            return res.status(400).json({ error: 'State is required.' });
-        }
-
-        const condition = await Conditions.findOne({ code });
-
-        if (!condition) {
-            return res.status(404).json('Condition not found');
-        }
-
-        const subCondition = condition.conditions.id(conditionId);
-        if (!subCondition) {
-            return res.status(404).json('Sub-condition not found');
-        }
-
-        subCondition.state = state;
-
-        await condition.save();
-
-        res.status(200).json(subCondition);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-// get datails condition
-app.get("/condition/:id" , async(req,res)=>{
-   
-   try{
-    const { id }= req.params ; 
-
-    const finddetails = await Conditions.findOne({code: id});
-
-  if(!finddetails){
-    return  res.status(500).json("حدث خطا");
-  }
-
-  return res.status(200).json(finddetails);
-
-
-   }catch(error){
-    res.status(500).json({ error: error.message });
-   }
-})
-
-
-app.get('/user', async (req, res) => {
-  try {
-    const conditions = await User.find();
-    res.json(conditions);
-  } catch (error) {
-    res.status(500).json({ error: 'Failed to retrieve conditions' });
-  }
-});
-
-
-app.get('/', (req, res) => {
-
-  res.send('Hello World!')
-})
-// io.on('connection', (socket) => {
-//     console.log('a user connected');
-
-//     socket.on('new-condition', (data) => {
-//     });
-// });
-
-server.listen(port, () => {
-  console.log(`Example app listening on port http://localhost:${port}`)
-})
+export default Admin;
