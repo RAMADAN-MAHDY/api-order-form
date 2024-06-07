@@ -13,24 +13,15 @@ const port = 5000;
 const server = createServer(app);
 const io = new Server(server,{
     cors:{
-        origin:'http://localhost:3000'
+        origin:'https://royal-corner.vercel.app'
     }
 });
 
-  
-  app.use(cors());
   
   io.on('connection', async (socket) => {
     console.log('عميل متصل');
 
     // إرسال الإشعارات غير المقروءة
-    const notifications = await Notification.find({ seenBy: { $ne: socket.id } });
-    socket.emit('unseen-notifications', notifications);
-
-    socket.on('notification-seen', async (notificationId) => {
-        await Notification.findByIdAndUpdate(notificationId, { $addToSet: { seenBy: socket.id } });
-    });
-
 
     socket.on('message', (data) => {
         console.log('رسالة جديدة:', data);
@@ -42,6 +33,7 @@ const io = new Server(server,{
     });
 });
 
+app.use(cors());
 
 app.use((req, res, next) => {
     const contentLength = parseInt(req.get('content-length'), 10);
@@ -121,15 +113,13 @@ app.post('/condition', async (req, res) => {
             // إذا لم يكن السجل موجودًا، قم بإنشاء سجل جديد
             await Conditions.create({ code, name, conditions: [stateDetail] });
         }
+    
+        io.emit('new-condition', { code });
 
-
-       const notification = new Notification({
+        const notification = new Notification({
             message: `تمت إضافة حالة جديدة بكود ${code}`,
         });
         await notification.save();
-
-        io.emit('new-condition', { code });
-
 
         res.status(200).json({ message: 'تمت إضافة تفاصيل الحالة بنجاح' });
     } catch (error) {
@@ -232,12 +222,12 @@ app.get('/', (req, res) => {
 
   res.send('Hello World!')
 })
-io.on('connection', (socket) => {
-    console.log('a user connected');
+// io.on('connection', (socket) => {
+//     console.log('a user connected');
 
-    socket.on('new-condition', (data) => {
-    });
-});
+//     socket.on('new-condition', (data) => {
+//     });
+// });
 
 server.listen(port, () => {
   console.log(`Example app listening on port http://localhost:${port}`)
