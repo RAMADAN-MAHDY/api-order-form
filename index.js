@@ -2,6 +2,7 @@ import express from 'express';
 import connectDB from './db.js';
 import Conditions from './chsma/condition.js';
 import User from './chsma/createuser.js';
+import Commitionschma from './chsma/commitionadmin.js';
 import bcrypt from 'bcrypt';
 import cors from 'cors';
 import { createServer } from 'node:http';
@@ -14,7 +15,7 @@ const port = 5000;
 const server = createServer(app);
 const io = new Server(server,{
     cors:{
-        origin:'https://royal-corner.vercel.app'
+        origin:'http://localhost:3000'
     }
 });
 
@@ -132,7 +133,7 @@ app.post('/condition', async (req, res) => {
             // إذا كان السجل موجودًا، أضف stateDetail إلى الحقل conditions
             existingCondition.conditions.push(stateDetail);
             await existingCondition.save();
-        } else {
+        } else { 
             // إذا لم يكن السجل موجودًا، قم بإنشاء سجل جديد
             await Conditions.create({ code, name, conditions: [stateDetail] });
         }
@@ -252,6 +253,70 @@ app.get("/condition/:id" , async(req,res)=>{
    }
 })
 
+app.post("/Commitionschma", async (req, res) => {
+    try {
+        const { commition , id } = req.body;
+
+        if (!id || !commition) {
+            return res.status(400).json({ err: 'Code and commition are required' });
+        }
+
+        const commitionfond = await Commitionschma.findOne({ id });
+
+        if (commitionfond) {
+            commitionfond.commition = commition;
+            await commitionfond.save();
+            return res.status(200).json(commitionfond); // إرسال الاستجابة وتوقف التنفيذ
+        } else {
+            console.log(id + "done-------");
+            const newCommition = await Commitionschma.create({ commition ,id });
+            return res.status(200).json(newCommition); // إرسال الاستجابة وتوقف التنفيذ
+        }
+    } catch (err) {
+        console.error(err); // طباعة الخطأ للتصحيح
+        return res.status(500).json({ err: 'Failed to retrieve conditions' });
+    }
+});
+
+app.get("/Commitionschma" , async(req,res)=>{
+   
+    try{
+        const getCommitionschma = await Commitionschma.find()
+        res.status(200).json(getCommitionschma);
+ 
+    }catch(error){
+     res.status(500).json({ error: error.message });
+    }
+ })
+ app.get('/lengthoforder', async (req, res) => {
+    try {
+        const conditions = await Conditions.find();
+
+        if (conditions && conditions.length > 0) {
+            const codeList = conditions.map(condition => condition.code);
+            
+            const findPromises = codeList.map(async code => {
+                const findcode = await Conditions.findOne({ code });
+                if (findcode) {
+                    return { code, conditionsLength: findcode.conditions.length };
+                } else {
+                    console.log(`Code ${code} not found in conditions`);
+                    return null; // or handle as needed
+                }
+            });
+
+            const results = await Promise.all(findPromises);
+            return res.status(200).json(results.filter(result => result !== null));
+        } else {
+            return res.status(404).json({ message: 'No conditions found' });
+        }
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+
 
 app.get('/user', async (req, res) => {
   try {
@@ -267,12 +332,6 @@ app.get('/', (req, res) => {
 
   res.send('Hello World!')
 })
-// io.on('connection', (socket) => {
-//     console.log('a user connected');
-
-//     socket.on('new-condition', (data) => {
-//     });
-// });
 
 server.listen(port, () => {
   console.log(`Example app listening on port http://localhost:${port}`)
