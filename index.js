@@ -42,7 +42,8 @@ io.on('connection', async (socket) => {
     });
 });
 const corsOptions = {
-    origin: 'https://royal-corner.vercel.app',
+    //https://royal-corner.vercel.app
+    origin: 'http://localhost:3000',
     optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
   }
   
@@ -331,7 +332,60 @@ app.get('/user', async (req, res) => {
     res.status(500).json({ error: 'Failed to retrieve conditions' });
   }
 });
+// put the order by admin
+app.put('/update/:id/:code', async (req, res) => {
+    const { id, code } = req.params;
+    const requestData = req.body;
 
+    try {
+        // إعداد كائن التحديث
+        let updateFields = {};
+        for (let key in requestData) {
+            if (requestData.hasOwnProperty(key)) {
+                updateFields[`conditions.$.${key}`] = requestData[key];
+            }
+        }
+
+        // استخدام findOneAndUpdate لتحديث الحقول المحددة
+        const updateResult = await Conditions.findOneAndUpdate(
+            { code, 'conditions._id': id },
+            { $set: updateFields },
+            { new: true, runValidators: true }
+        );
+
+        if (!updateResult) {
+            return res.status(404).json({ message: 'User or condition not found' });
+        }
+
+        res.status(200).json({ message: "Data update successful", updatedCondition: updateResult });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+
+
+
+
+
+
+
+// delete Conditions by code or id 
+app.delete('/item/:code', async (req, res) => {
+    try {
+      const code = req.params.code;
+      const deletedItem = await Conditions.findOneAndDelete({ code: code });
+  
+      if (!deletedItem) {
+        return res.status(404).send('العنصر غير موجود');
+      }
+  
+      res.send(`تم حذف العنصر: ${deletedItem.name}`);
+    } catch (error) {
+      res.status(500).send('حدث خطأ أثناء محاولة الحذف');
+    }
+  });
 
 app.get('/', (req, res) => {
 
