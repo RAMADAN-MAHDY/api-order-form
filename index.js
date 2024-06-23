@@ -43,7 +43,7 @@ io.on('connection', async (socket) => {
 });
 const corsOptions = {
     //https://royal-corner.vercel.app
-    origin: 'http://localhost:3000',
+    origin: 'https://royal-corner.vercel.app',
     optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
   }
   
