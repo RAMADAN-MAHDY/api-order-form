@@ -371,21 +371,26 @@ app.put('/update/:id/:code', async (req, res) => {
 
 
 
-// delete Conditions by code or id 
-app.delete('/item/:code', async (req, res) => {
+app.delete('/item/:code/:id', async (req, res) => {
     try {
-      const code = req.params.code;
-      const deletedItem = await Conditions.findOneAndDelete({ code: code });
-  
-      if (!deletedItem) {
-        return res.status(404).send('العنصر غير موجود');
-      }
-  
-      res.send(`تم حذف العنصر: ${deletedItem.name}`);
+        const code = req.params.code;
+        const id = req.params.id;
+
+        // تحديث الكائن وسحب العنصر من المصفوفة
+        const updatedCondition = await Conditions.updateOne(
+            { code: code },
+            { $pull: { conditions: { _id: id } } }
+        );
+
+        if (updatedCondition.nModified === 0) {
+            return res.status(404).send('العنصر غير موجود');
+        }
+
+        res.send('تم حذف العنصر بنجاح');
     } catch (error) {
-      res.status(500).send('حدث خطأ أثناء محاولة الحذف');
+        res.status(500).send('حدث خطأ أثناء محاولة الحذف');
     }
-  });
+});
 
 app.get('/', (req, res) => {
 
