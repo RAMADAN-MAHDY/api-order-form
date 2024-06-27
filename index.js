@@ -3,7 +3,7 @@ import connectDB from './db.js';
 import Conditions from './chsma/condition.js';
 import User from './chsma/createuser.js';
 import Commitionschma from './chsma/commitionadmin.js';
-import bcrypt from 'bcrypt';
+// import bcrypt from 'bcrypt';
 import cors from 'cors';
 import { createServer } from 'node:http';
 import { Server } from "socket.io";
@@ -82,7 +82,8 @@ const checkemail = await User.findOne({code});
 if(!checkemail){
     return res.status(500).json("يرجي التاكد من الحساب واعادة المحاوله")
 }
-const ispasswordValid = await bcrypt.compare(password ,checkemail.password );
+const ispasswordValid = await password === checkemail.password;
+// const ispasswordValid = await bcrypt.compare(password ,checkemail.password );
 
 if(!ispasswordValid){
     return res.status(500).json("يرجي التاكد من الحساب واعادة المحاوله")
@@ -109,8 +110,8 @@ try{
     if(checkemail || checkecode){
         return res.status(300).json("جرب حساب اخر ")
     }
-    const hashedpassword = await bcrypt.hash(password , 10)
-    await User.create({email, password:hashedpassword , code})
+    // const hashedpassword = await bcrypt.hash(password , 10)
+    await User.create({email, password , code})
     return res.status(200).json("تم انشاء الحساب");
 
 }catch(err){
