@@ -386,7 +386,7 @@ app.delete('/item/:code/:id', async (req, res) => {
             return res.status(404).send('العنصر غير موجود');
         }
 
-        res.send('تم حذف العنصر بنجاح');
+        res.send('تم حذف العنصر بنجاح.');
     } catch (error) {
         res.status(500).send('حدث خطأ أثناء محاولة الحذف');
     }
