@@ -200,7 +200,26 @@ app.put('/condition/:code/:conditionId', async (req, res) => {
         if (!subCondition) {
             return res.status(404).json('Sub-condition not found');
         }
+        const mailOptions = {
+            from: 'ramadanmahdy45@gmail.com', // عنوان المرسل
+            to: ['ahmedmahdy20105@gmail.com' , 'magedzein7@gmail.com'], // عنوان المستلم (حساب Gmail الخاص بك)
+            subject: ` طلب العموله: /${code}`, // موضوع البريد
+            text: `  طلب العموله  بكود ${code}.`, // نص البريد
+            html: `<p>تم إضافة طلب عموله جديد من بكود <strong>${code}</strong>.</p>` // محتوى HTML للبريد
+        };
+        
 
+        // const info = await transporter.sendMail(mailOptions);
+        // console.log('Message sent: %s', info.messageId);
+        // res.send(`Email sent successfully: ${info.messageId}`);
+
+// إرسال البريد الإلكتروني
+await transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.error('حدث خطأ أثناء إرسال البريد الإلكتروني:', error);
+    } else {
+      console.log('تم إرسال البريد الإلكتروني بنجاح:', info.response);
+    }})
         subCondition.commitionreq = commitionreq;
 
         await condition.save();
@@ -290,6 +309,7 @@ app.get("/Commitionschma" , async(req,res)=>{
     try{
         const getCommitionschma = await Commitionschma.find()
         res.status(200).json(getCommitionschma);
+        
  
     }catch(error){
      res.status(500).json({ error: error.message });
