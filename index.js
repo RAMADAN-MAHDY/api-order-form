@@ -79,13 +79,23 @@ app.post('/login',async (req,res)=>{
 try{
 const {email , password ,code} = req.body;
 const checkemail = await User.findOne({code});
-if(!checkemail){
+const isnamevalid = await email ===checkemail.email;
+
+if(!checkemail || !isnamevalid){
     return res.status(500).json("يرجي التاكد من الحساب واعادة المحاوله")
 }
 const ispasswordValid = await password === checkemail.password;
-const ispasswordValidbcrypt = await bcrypt.compare(password ,checkemail.password );
 
-if(!ispasswordValid || !ispasswordValidbcrypt){
+// للتحقق من الباسورد
+const hashedPassword = checkemail.password; 
+const hashedPasswordbcrypt =await bcrypt.compare(password, hashedPassword)
+
+
+
+
+// const ispasswordValidbcrypt = await bcrypt.compare(password ,checkemail.password );
+
+if(!ispasswordValid && !hashedPasswordbcrypt){
     return res.status(500).json("يرجي التاكد من الحساب واعادة المحاوله")
 }
 return res.status(200).json({ message: 'Login successful' });
@@ -97,7 +107,7 @@ return res.status(200).json({ message: 'Login successful' });
 })
 
 
-//post account 
+//create an account 
 app.post('/user',async (req,res)=>{
 try{
     const {email, password , code} = req.body;
@@ -111,7 +121,16 @@ try{
         return res.status(300).json("جرب حساب اخر ")
     }
     // const hashedpassword = await bcrypt.hash(password , 10)
-    await User.create({email, password , code})
+
+// لتشفير الباسورد
+const saltRounds = 10;
+
+const hashedpassword =await bcrypt.hash(password, saltRounds)
+
+
+
+
+    await User.create({email, password : hashedpassword , code})
     return res.status(200).json("تم انشاء الحساب");
 
 }catch(err){
