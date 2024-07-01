@@ -3,7 +3,7 @@ import connectDB from './db.js';
 import Conditions from './chsma/condition.js';
 import User from './chsma/createuser.js';
 import Commitionschma from './chsma/commitionadmin.js';
-// import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 import cors from 'cors';
 import { createServer } from 'node:http';
 import { Server } from "socket.io";
@@ -83,9 +83,9 @@ if(!checkemail){
     return res.status(500).json("يرجي التاكد من الحساب واعادة المحاوله")
 }
 const ispasswordValid = await password === checkemail.password;
-// const ispasswordValid = await bcrypt.compare(password ,checkemail.password );
+const ispasswordValidbcrypt = await bcrypt.compare(password ,checkemail.password );
 
-if(!ispasswordValid){
+if(!ispasswordValid || !ispasswordValidbcrypt){
     return res.status(500).json("يرجي التاكد من الحساب واعادة المحاوله")
 }
 return res.status(200).json({ message: 'Login successful' });
@@ -207,19 +207,14 @@ app.put('/condition/:code/:conditionId', async (req, res) => {
             text: `  طلب العموله  بكود ${code}.`, // نص البريد
             html: `<p>تم إضافة طلب عموله جديد من الكود <strong>${code}</strong>.</p>` // محتوى HTML للبريد
         };
-        
-
-        // const info = await transporter.sendMail(mailOptions);
-        // console.log('Message sent: %s', info.messageId);
-        // res.send(`Email sent successfully: ${info.messageId}`);
-
 // إرسال البريد الإلكتروني
-await transporter.sendMail(mailOptions, (error, info) => {
+    await transporter.sendMail(mailOptions, (error, info) => {
     if (error) {
       console.error('حدث خطأ أثناء إرسال البريد الإلكتروني:', error);
     } else {
       console.log('تم إرسال البريد الإلكتروني بنجاح:', info.response);
     }})
+
         subCondition.commitionreq = commitionreq;
 
         await condition.save();
