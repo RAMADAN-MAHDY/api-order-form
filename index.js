@@ -488,7 +488,9 @@ app.post('/search/:name' , async (req, res)=>{
         res.status(500).json({message :"Name parameter is missing" });
 
         }
-       const code =await findCodeByClientName(name);
+        const decodedName = decodeURIComponent(name).trim();
+        const code = await findCodeByClientName(decodedName);
+
             if (code) {
                 console.log('Code:', code);
                 res.status(200).json({code});
