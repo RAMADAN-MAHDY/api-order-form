@@ -426,6 +426,89 @@ app.delete('/item/:code/:id', async (req, res) => {
         res.status(500).send('حدث خطأ أثناء محاولة الحذف');
     }
 });
+// async function findClientByName(clientName) {
+//     try {
+//         const result = await Conditions.findOne(
+//             { 'conditions.clientname': clientName } 
+//         );
+//         if (result) {
+//             // عرض الكود الخاص بالوثيقة التي تحتوي على الشرط المطابق
+//             console.log('Code found:', result.code);
+//             return result.code;
+//         } else {
+//             console.log('Client not found');
+//             return null;
+//         }
+//     } catch (error) {
+//         console.error("Error finding client by name:", error);
+//         throw error;
+//     }
+// }
+
+// // استخدام الدالة للبحث عن عميل معين
+// findClientByName('ramadan').then(client => {
+//     if (client) {
+//         console.log('Client found:', client);
+//     } else {
+//         console.log('Client not found');
+//     }
+// });
+
+async function findCodeByClientName(clientName) {
+    try {
+        // استخدام aggregate للبحث عن اسم العميل والحصول على الكود
+        const result = await Conditions.aggregate([
+            { $match: { 'conditions.clientname': clientName } },
+            { $unwind: '$conditions' },
+            { $match: { 'conditions.clientname': clientName } },
+            { $project: { code: 1, _id: 0 } }
+        ]);
+
+        if (result.length > 0) {
+            console.log('Code found:', result[0].code);
+            return result[0].code;
+        } else {
+            console.log('Client not found');
+            return null;
+        }
+    } catch (error) {
+        console.error("Error finding client by name:", error);
+        throw error;
+    }
+}
+
+// استخدام الدالة للبحث عن الكود بناءً على اسم العميل
+
+
+app.post('/search/:name' , async (req, res)=>{
+    try{
+        const {name } = req.params;
+ 
+        if(!name){
+        res.status(500).json({message :"Name parameter is missing" });
+
+        }
+       const code =await findCodeByClientName(name);
+            if (code) {
+                console.log('Code:', code);
+                res.status(200).json({code});
+            } else {
+                console.log('Code not found');
+                res.status(500).json({message:"Client not found in the database"});
+            }
+      
+
+
+
+    }catch(error){
+        res.status(500).json({ error: error.message });
+    }
+
+
+
+});
+
+
 
 app.get('/', (req, res) => {
 
