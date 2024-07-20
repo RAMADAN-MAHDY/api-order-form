@@ -14,34 +14,35 @@ const app = express()
 const port = 5000;
 
 const server = createServer(app);
-const io = new Server(server,{
-    cors:{
-        origin:'http://localhost:3000'
-    }
-});
+
+// const io = new Server(server,{
+//     cors:{
+//         origin:'http://localhost:3000'
+//     }
+// });
 
   
-io.on('connection', async (socket) => {
-    console.log('عميل متصل:', socket.id);
+// io.on('connection', async (socket) => {
+//     console.log('عميل متصل:', socket.id);
 
-    // إرسال الإشعارات غير المقروءة عند الاتصال
-    const notifications = await Notification.find({ seenBy: { $ne: socket.id } });
-    if (notifications.length > 0) {
-        socket.emit('unread-notifications', notifications);
-    }
+//     // إرسال الإشعارات غير المقروءة عند الاتصال
+//     const notifications = await Notification.find({ seenBy: { $ne: socket.id } });
+//     if (notifications.length > 0) {
+//         socket.emit('unread-notifications', notifications);
+//     }
 
-    socket.on('disconnect', () => {
-        console.log('عميل مفصول:', socket.id);
-    });
+//     socket.on('disconnect', () => {
+//         console.log('عميل مفصول:', socket.id);
+//     });
 
-    // تحديث الإشعارات كمقروءة
-    socket.on('mark-as-read', async (notificationIds) => {
-        await Notification.updateMany(
-            { _id: { $in: notificationIds } },
-            { $addToSet: { seenBy: socket.id } }
-        );
-    });
-});
+//     // تحديث الإشعارات كمقروءة
+//     socket.on('mark-as-read', async (notificationIds) => {
+//         await Notification.updateMany(
+//             { _id: { $in: notificationIds } },
+//             { $addToSet: { seenBy: socket.id } }
+//         );
+//     });
+// });
 const corsOptions = {
     //https://royal-corner.vercel.app
     origin: 'https://royal-corner.vercel.app',
