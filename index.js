@@ -9,6 +9,7 @@ import { createServer } from 'node:http';
 import { Server } from "socket.io";
 import Notification from './chsma/notification.js';
 import nodemailer from 'nodemailer';
+import removeAccents  from "remove-accents";
 const app = express()
 const port = 5000;
 
@@ -138,6 +139,56 @@ const hashedpassword =await bcrypt.hash(password, saltRounds)
 }
 })
 
+// سكريبت لنقل البيانات او تقسيمها من مخطط كبير لعدة مخططات صغيره
+async function migrateOldConditions() {
+    try {
+        // البحث عن المستندات التي تحتوي على أكثر من 15 طلبًا
+        const conditions = await Conditions.find({code:1200});
+
+        console.log(conditions);
+
+            // تحقق من وجود مستندات تتجاوز الحد
+            if (conditions.length === 0) {
+                console.log('لا توجد مستندات تحتوي على أكثر من 15 طلبًا.');
+                return; // إيقاف العملية إذا لم يكن هناك مستندات تتجاوز الحد
+            }
+    
+        for (const condition of conditions) {
+            const { code, name, conditions: allConditions } = condition;
+
+            // تقسيم الطلبات إلى مجموعات من 10 طلبًا
+            const chunks = [];
+            for (let i = 0; i < allConditions.length; i += 10) {
+                const chunk = allConditions.slice(i, i + 10);
+                chunks.push({ code, name, conditions: chunk });
+            }
+
+            // إنشاء المستندات الجديدة
+            const newDocs = await Conditions.insertMany(chunks);
+
+            // تحقق من أن المستندات الجديدة تم إنشاؤها بنجاح
+            for (const newDoc of newDocs) {
+                const existing = await Conditions.findOne({ _id: newDoc._id });
+                if (!existing) {
+                    throw new Error(`لم يتم العثور على المستند الجديد بعد إنشائه: ${newDoc._id}`);
+                }
+            }
+
+            // حذف المستندات القديمة بعد التأكد من أن البيانات تم ترحيلها بنجاح
+            await Conditions.deleteOne({ _id: "666c5ce0149b9c28fb0f04e3"});
+        
+        }
+        console.log(conditions );
+
+        console.log('تم ترحيل الطلبات بنجاح');
+    } catch (error) {
+        console.error('خطأ في ترحيل الطلبات:', error);
+    }
+}
+
+// تشغيل السكربت   ------------------------------------------------------
+// migrateOldConditions();
+
 
 //post conditon to conditions array
 app.post('/condition', async (req, res) => {
@@ -152,9 +203,9 @@ app.post('/condition', async (req, res) => {
         stateDetail.timestamp = new Date();
 
         // البحث عن السجل الموجود باستخدام الكود
-        let existingCondition = await Conditions.findOne({ code });
+        let existingCondition = await Conditions.findOne({ code }).sort({_id:-1});
 
-        if (existingCondition) {
+        if (existingCondition && existingCondition.conditions.length < 15) {
             // إذا كان السجل موجودًا، أضف stateDetail إلى الحقل conditions
             existingCondition.conditions.push(stateDetail);
             await existingCondition.save();
@@ -199,7 +250,7 @@ await transporter.sendMail(mailOptions, (error, info) => {
     }
 });
 
-// put condition data 
+// put  commition request        
 app.put('/condition/:code/:conditionId', async (req, res) => {
     try {
         const { code, conditionId } = req.params;
@@ -209,16 +260,16 @@ app.put('/condition/:code/:conditionId', async (req, res) => {
             return res.status(400).json({ error: 'State is required.' });
         }
 
-        const condition = await Conditions.findOne({ code });
+        const updatedCondition = await Conditions.findOneAndUpdate(
+            { code: code, 'conditions._id': conditionId },
+            { $set: { 'conditions.$.commitionreq': commitionreq } }, // تحديث حالة الشرط الفرعي
+            { new: true, runValidators: true } // إرجاع المستند المحدث والتحقق من صحة التحديث
+        );
 
-        if (!condition) {
-            return res.status(404).json('Condition not found');
+        if (!updatedCondition) {
+            return res.status(404).json('Condition or sub-condition not found');
         }
 
-        const subCondition = condition.conditions.id(conditionId);
-        if (!subCondition) {
-            return res.status(404).json('Sub-condition not found');
-        }
         const mailOptions = {
             from: 'ramadanmahdy45@gmail.com', // عنوان المرسل
             to: ['ahmedmahdy20105@gmail.com' , 'magedzein7@gmail.com'], // عنوان المستلم (حساب Gmail الخاص بك)
@@ -234,9 +285,8 @@ app.put('/condition/:code/:conditionId', async (req, res) => {
       console.log('تم إرسال البريد الإلكتروني بنجاح:', info.response);
     }})
 
-        subCondition.commitionreq = commitionreq;
+    const subCondition = updatedCondition.conditions.id(conditionId);
 
-        await condition.save();
 
         res.status(200).json(subCondition);
     } catch (error) {
@@ -253,45 +303,45 @@ app.put('/condition/state/:code/:conditionId', async (req, res) => {
             return res.status(400).json({ error: 'State is required.' });
         }
 
-        const condition = await Conditions.findOne({ code });
+        // استخدام findOneAndUpdate لتحديث الشرط الفرعي مباشرة
+        const updatedCondition = await Conditions.findOneAndUpdate(
+            { code: code, 'conditions._id': conditionId },
+            { $set: { 'conditions.$.state': state } }, // تحديث حالة الشرط الفرعي
+            { new: true, runValidators: true } // إرجاع المستند المحدث والتحقق من صحة التحديث
+        );
 
-        if (!condition) {
-            return res.status(404).json('Condition not found');
+        if (!updatedCondition) {
+            return res.status(404).json('Condition or sub-condition not found');
         }
 
-        const subCondition = condition.conditions.id(conditionId);
-        if (!subCondition) {
-            return res.status(404).json('Sub-condition not found');
-        }
-
-        subCondition.state = state;
-
-        await condition.save();
+        // الحصول على الشرط الفرعي المحدث من المستند المحدث
+        const subCondition = updatedCondition.conditions.id(conditionId);
 
         res.status(200).json(subCondition);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
+
 // get datails condition
 app.get("/condition/:id" , async(req,res)=>{
    
-   try{
-    const { id }= req.params ; 
-
-    const finddetails = await Conditions.findOne({code: id});
-
-  if(!finddetails){
-    return  res.status(500).json("حدث خطا");
-  }
-
-  return res.status(200).json(finddetails);
-
-
-   }catch(error){
-    res.status(500).json({ error: error.message });
+    try{
+     const { id }= req.params ; 
+ 
+     const finddetails = await Conditions.find({code: id});
+    
+   if(!finddetails){
+     return  res.status(500).json("حدث خطا");
    }
-})
+ 
+   return res.status(200).json(finddetails);
+ 
+ 
+    }catch(error){
+     res.status(500).json({ error: error.message });
+    }
+ })
 
 app.post("/Commitionschma", async (req, res) => {
     try {
@@ -331,23 +381,21 @@ app.get("/Commitionschma" , async(req,res)=>{
  })
  app.get('/lengthoforder', async (req, res) => {
     try {
-        const conditions = await Conditions.find();
+        // استخدام استعلام مجمع للحصول على جميع المستندات من Conditions
+        const conditions = await Conditions.aggregate([
+            // إلغاء تجميع الشروط ضمن المجموعات بناءً على الكود
+            { $unwind: "$conditions" },
+            // تجميع البيانات بناءً على الكود وحساب الطول
+            {
+                $group: {
+                    _id: "$code",
+                    conditionsLength: { $sum: 1 } // حساب عدد الشروط
+                }
+            }
+        ]);
 
         if (conditions && conditions.length > 0) {
-            const codeList = conditions.map(condition => condition.code);
-            
-            const findPromises = codeList.map(async code => {
-                const findcode = await Conditions.findOne({ code });
-                if (findcode) {
-                    return { code, conditionsLength: findcode.conditions.length };
-                } else {
-                    console.log(`Code ${code} not found in conditions`);
-                    return null; // or handle as needed
-                }
-            });
-
-            const results = await Promise.all(findPromises);
-            return res.status(200).json(results.filter(result => result !== null));
+            return res.status(200).json(conditions);
         } else {
             return res.status(404).json({ message: 'No conditions found' });
         }
@@ -356,6 +404,7 @@ app.get("/Commitionschma" , async(req,res)=>{
         res.status(500).json({ error: err.message });
     }
 });
+
 
 
 
@@ -402,65 +451,63 @@ app.put('/update/:id/:code', async (req, res) => {
 
 
 
-
-
-
-
 app.delete('/item/:code/:id', async (req, res) => {
     try {
-        const code = req.params.code;
-        const id = req.params.id;
+        const { code, id } = req.params;
 
-        // تحديث الكائن وسحب العنصر من المصفوفة
-        const updatedCondition = await Conditions.updateOne(
-            { code: code },
-            { $pull: { conditions: { _id: id } } }
-        );
+        // تحويل id إلى ObjectId إذا كان من نوع String
+        // const objectId = mongoose.Types.ObjectId.isValid(id) ? mongoose.Types.ObjectId(id) : id;
 
-        if (updatedCondition.nModified === 0) {
-            return res.status(404).send('العنصر غير موجود');
+        // العثور على جميع الوثائق التي تحتوي على الكود
+        const conditions = await Conditions.find({ code: code });
+
+        if (conditions.length === 0) {
+            return res.status(404).json({ message: 'لم يتم العثور على أي وثائق تحتوي على الكود المحدد' });
         }
 
-        res.send('تم حذف العنصر بنجاح.');
+        let deletionResult = false;
+
+        // تحديث كل وثيقة تحتوي على الكود وسحب العنصر من المصفوفة
+        for (const condition of conditions) {
+            const result = await Conditions.updateOne(
+                { _id: condition._id, 'conditions._id': id },
+                { $pull: { conditions: { _id: id } } }
+            );
+
+            if (result.modifiedCount > 0) {
+                deletionResult = true; // إذا تم التحديث في أي وثيقة، قم بتعيين نتيجة الحذف كنجاح
+                break; // إيقاف الحلقة بمجرد العثور على العنصر وحذفه
+            }
+        }
+
+        if (!deletionResult) {
+            return res.status(404).json({ message: 'العنصر غير موجود أو تم حذفه مسبقاً من جميع الوثائق' });
+        }
+
+        res.status(200).json({ message: 'تم حذف العنصر بنجاح من الوثيقة الأولى التي تحتوي عليه' });
     } catch (error) {
-        res.status(500).send('حدث خطأ أثناء محاولة الحذف');
+        console.error('حدث خطأ أثناء محاولة الحذف:', error);
+        res.status(500).json({ error: 'حدث خطأ أثناء محاولة الحذف' });
     }
 });
-// async function findClientByName(clientName) {
-//     try {
-//         const result = await Conditions.findOne(
-//             { 'conditions.clientname': clientName } 
-//         );
-//         if (result) {
-//             // عرض الكود الخاص بالوثيقة التي تحتوي على الشرط المطابق
-//             console.log('Code found:', result.code);
-//             return result.code;
-//         } else {
-//             console.log('Client not found');
-//             return null;
-//         }
-//     } catch (error) {
-//         console.error("Error finding client by name:", error);
-//         throw error;
-//     }
-// }
 
-// // استخدام الدالة للبحث عن عميل معين
-// findClientByName('ramadan').then(client => {
-//     if (client) {
-//         console.log('Client found:', client);
-//     } else {
-//         console.log('Client not found');
-//     }
-// });
+function normalizeArabic(text) {
+    // إزالة التشكيل
+    const textWithoutAccents = removeAccents(text);
+    // إزالة المسافات البيضاء الزائدة
+    const normalizedText = textWithoutAccents.trim();
+    return normalizedText;
+}
 
 async function findCodeByClientName(clientName) {
     try {
-        // استخدام aggregate للبحث عن اسم العميل والحصول على الكود
+        // تطبيع الاسم العربي
+        const normalizedClientName = normalizeArabic(clientName);
+
         const result = await Conditions.aggregate([
-            { $match: { 'conditions.clientname': clientName } },
+            { $match: { 'conditions.clientname': normalizedClientName } },
             { $unwind: '$conditions' },
-            { $match: { 'conditions.clientname': clientName } },
+            { $match: { 'conditions.clientname': normalizedClientName } },
             { $project: { code: 1, _id: 0 } }
         ]);
 
@@ -520,3 +567,5 @@ app.get('/', (req, res) => {
 server.listen(port, () => {
   console.log(`Example app listening on port http://localhost:${port}`)
 })
+
+// api gimini key     AIzaSyBA-GGARuigekKJiVClyv40Ez20tladO3Y
