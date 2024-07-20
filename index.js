@@ -224,11 +224,6 @@ app.post('/condition', async (req, res) => {
             html: `<p>تم إضافة حالة جديدة من <strong>${name}</strong> بكود <strong>${code}</strong>.</p>` // محتوى HTML للبريد
         };
         
-
-        // const info = await transporter.sendMail(mailOptions);
-        // console.log('Message sent: %s', info.messageId);
-        // res.send(`Email sent successfully: ${info.messageId}`);
-
 // إرسال البريد الإلكتروني
 await transporter.sendMail(mailOptions, (error, info) => {
     if (error) {
@@ -237,13 +232,13 @@ await transporter.sendMail(mailOptions, (error, info) => {
       console.log('تم إرسال البريد الإلكتروني بنجاح:', info.response);
     }})
 
-        const notification = new Notification({
-            message: `تمت إضافة حالة جديدة بكود ${code}`,
-        });
-        await notification.save();
+        // const notification = new Notification({
+        //     message: `تمت إضافة حالة جديدة بكود ${code}`,
+        // });
+        // await notification.save();
 
-        console.log('إرسال حدث حالة جديدة بالكود:', code);
-        io.emit('new-condition', { code });
+        // console.log('إرسال حدث حالة جديدة بالكود:', code);
+        // io.emit('new-condition', { code });
 
         res.status(200).json({ message: 'تمت إضافة تفاصيل الحالة بنجاح' });
     } catch (error) {
