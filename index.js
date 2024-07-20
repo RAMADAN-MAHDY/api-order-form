@@ -194,7 +194,7 @@ async function migrateOldConditions() {
 //post conditon to conditions array
 app.post('/condition', async (req, res) => {
     try {
-        const { name , code , stateDetail, } = req.body;
+        const { name , code , stateDetail } = req.body;
    
         if (!stateDetail) {
             return res.status(400).json({ error: 'الحقول المطلوبة مفقودة' });
