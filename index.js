@@ -6,8 +6,9 @@ import Commitionschma from './chsma/commitionadmin.js';
 import bcrypt from 'bcryptjs';
 import cors from 'cors';
 import { createServer } from 'node:http';
-import { Server } from "socket.io";
-import Notification from './chsma/notification.js';
+// import { Server } from "socket.io";
+// import Notification from './chsma/notification.js';
+import compression from 'compression';
 import nodemailer from 'nodemailer';
 import removeAccents  from "remove-accents";
 const app = express()
@@ -43,7 +44,6 @@ const server = createServer(app);
 //         );
 //     });
 // });
-
 const corsOptions = {
     //https://royal-corner.vercel.app
     origin: 'https://royal-corner.vercel.app',
@@ -60,6 +60,17 @@ app.use((req, res, next) => {
   // زيادة الحد الأقصى لحجم البيانات المسموح به
 app.use(express.json({limit: '50mb'}));
 app.use(express.urlencoded({limit: '50mb', extended: true, parameterLimit: 50000}));
+//ضغط البيانات 
+app.use(compression({
+    level:6,
+    threshold: 0,
+    filter: (req, res) => {
+        if (req.headers['x-no-compression']) {
+            return false;
+        }
+        return compression.filter(req, res);
+    }
+}));
 connectDB();
 // app.use(express.json())
 //log in 
