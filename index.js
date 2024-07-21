@@ -320,25 +320,34 @@ app.put('/condition/state/:code/:conditionId', async (req, res) => {
 });
 
 // get datails condition
-app.get("/condition/:id" , async(req,res)=>{
-   
-    try{
-     const { id }= req.params ; 
- 
-     const finddetails = await Conditions.find({code: id});
-    
-   if(!finddetails){
-     return  res.status(500).json("حدث خطا");
-   }
- 
-   return res.status(200).json(finddetails);
- 
- 
-    }catch(error){
-     res.status(500).json({ error: error.message });
+app.get('/condition/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { page = 1, limit = 5} = req.query; // الحصول على الصفحة والحد من طلب الاستعلام
+      const skip = (page - 1) * limit; // حساب التخطي
+  
+      const finddetails = await Conditions.find({ code: id })
+        .skip(skip)
+        .limit(parseInt(limit))
+        .exec();
+  
+      const total = await Conditions.countDocuments({ code: id });
+  
+      if (!finddetails) {
+        return res.status(500).json("حدث خطأ");
+      }
+  
+      res.status(200).json({
+        page: parseInt(page),
+        limit: parseInt(limit),
+        totalPages: Math.ceil(total / limit),
+        data: finddetails
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
     }
- })
-
+  });
+  
 app.post("/Commitionschma", async (req, res) => {
     try {
         const { commition , id } = req.body;
@@ -364,6 +373,7 @@ app.post("/Commitionschma", async (req, res) => {
     }
 });
 
+//            Commitions 
 app.get("/Commitionschma" , async(req,res)=>{
    
     try{
