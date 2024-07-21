@@ -203,14 +203,45 @@ async function migrateOldConditions() {
 // تشغيل السكربت   ------------------------------------------------------
 // migrateOldConditions();
 // تعديل حجم الصوره 
+
 async function processImage(base64Image) {
     const buffer = Buffer.from(base64Image.split(',')[1], 'base64'); // استخراج الصورة من base64
-    const processedBuffer = await sharp(buffer)
-        .resize({ width: 800 }) // تغيير الحجم حسب الحاجة
-        .jpeg({ quality: 10 }) // تحويل الصورة إلى JPEG وضغطها بجودة 10%
-        .toBuffer();
-    return `data:image/jpeg;base64,${processedBuffer.toString('base64')}`; // تحويل الصورة المعدلة إلى base64
+
+    // استخدم sharp لاكتشاف نوع الصورة
+    const metadata = await sharp(buffer).metadata();
+
+    // الحصول على نوع الصورة من metadata
+    const format = metadata.format;
+
+    let processedBuffer;
+    switch (format) {
+        case 'png':
+            processedBuffer = await sharp(buffer)
+                .toFormat('png', { compressionLevel: 9 }) // تعيين مستوى الضغط لـ PNG
+                .toBuffer();
+            break;
+        case 'webp':
+            processedBuffer = await sharp(buffer)
+                .toFormat('webp', { quality: 20 }) // جودة WebP
+                .toBuffer();
+            break;
+        case 'avif':
+            processedBuffer = await sharp(buffer)
+                .toFormat('avif', { quality: 20 }) // جودة AVIF
+                .toBuffer();
+            break;
+        case 'jpeg':
+        default:
+            processedBuffer = await sharp(buffer)
+                .toFormat('jpeg', { quality: 20 }) // جودة JPEG
+                .toBuffer();
+            break;
+    }
+
+    return `data:image/${format};base64,${processedBuffer.toString('base64')}`; // تحويل الصورة المعدلة إلى base64
 }
+
+
 
 //post conditon to conditions array
 app.post('/condition', async (req, res) => {
