@@ -43,6 +43,7 @@ const server = createServer(app);
 //         );
 //     });
 // });
+
 const corsOptions = {
     //https://royal-corner.vercel.app
     origin: 'https://royal-corner.vercel.app',
