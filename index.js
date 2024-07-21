@@ -9,6 +9,7 @@ import { createServer } from 'node:http';
 // import { Server } from "socket.io";
 // import Notification from './chsma/notification.js';
 import compression from 'compression';
+import sharp from 'sharp';
 import nodemailer from 'nodemailer';
 import removeAccents  from "remove-accents";
 const app = express()
@@ -201,7 +202,15 @@ async function migrateOldConditions() {
 
 // تشغيل السكربت   ------------------------------------------------------
 // migrateOldConditions();
-
+// تعديل حجم الصوره 
+async function processImage(base64Image) {
+    const buffer = Buffer.from(base64Image.split(',')[1], 'base64'); // استخراج الصورة من base64
+    const processedBuffer = await sharp(buffer)
+        .resize({ width: 800 }) // تغيير الحجم حسب الحاجة
+        .jpeg({ quality: 10 }) // تحويل الصورة إلى JPEG وضغطها بجودة 10%
+        .toBuffer();
+    return `data:image/jpeg;base64,${processedBuffer.toString('base64')}`; // تحويل الصورة المعدلة إلى base64
+}
 
 //post conditon to conditions array
 app.post('/condition', async (req, res) => {
@@ -211,7 +220,9 @@ app.post('/condition', async (req, res) => {
         if (!stateDetail) {
             return res.status(400).json({ error: 'الحقول المطلوبة مفقودة' });
         }
-
+        if (stateDetail.image) {
+            stateDetail.image = await processImage(stateDetail.image);
+        }
         // إضافة الوقت الحالي إلى stateDetail
         stateDetail.timestamp = new Date();
 
