@@ -272,7 +272,7 @@ app.post('/condition', async (req, res) => {
         //sent message to gmail
         const mailOptions = {
             from: 'ramadanmahdy45@gmail.com', // عنوان المرسل
-            to: ['ahmedmahdy20105@gmail.com' , 'magedzein7@gmail.com'], // عنوان المستلم (حساب Gmail الخاص بك)
+            to: ['ahmedmahdy20105@gmail.com' , 'magedzein7@gmail.com' , 'ramadanmahdy45@gmail.com'], // عنوان المستلم (حساب Gmail الخاص بك)
             subject: `حالة جديدة: ${name}/${code}`, // موضوع البريد
             text: `تم إضافة حالة جديدة من ${name} بكود ${code}.`, // نص البريد
             html: `<p>تم إضافة حالة جديدة من <strong>${name}</strong> بكود <strong>${code}</strong>.</p>` // محتوى HTML للبريد
@@ -327,13 +327,15 @@ app.put('/condition/:code/:conditionId', async (req, res) => {
             text: `  طلب العموله  بكود ${code}.`, // نص البريد
             html: `<p>تم إضافة طلب عموله جديد من الكود <strong>${code}</strong>.</p>` // محتوى HTML للبريد
         };
+        
 // إرسال البريد الإلكتروني
-    await transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      console.error('حدث خطأ أثناء إرسال البريد الإلكتروني:', error);
-    } else {
-      console.log('تم إرسال البريد الإلكتروني بنجاح:', info.response);
-    }})
+
+         await transporter.sendMail(mailOptions, (error, info) => {
+          if (error) {
+           console.error('حدث خطأ أثناء إرسال البريد الإلكتروني:', error);
+         } else {
+         console.log('تم إرسال البريد الإلكتروني بنجاح:', info.response);
+          }})
 
     const subCondition = updatedCondition.conditions.id(conditionId);
 
