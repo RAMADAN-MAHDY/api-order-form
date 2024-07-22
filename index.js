@@ -277,9 +277,8 @@ app.post('/condition', async (req, res) => {
             text: `تم إضافة حالة جديدة من ${name} بكود ${code}.`, // نص البريد
             html: `<p>تم إضافة حالة جديدة من <strong>${name}</strong> بكود <strong>${code}</strong>.</p>` // محتوى HTML للبريد
         };
-        
 // إرسال البريد الإلكتروني
-await transporter.sendMail(mailOptions, (error, info) => {
+    await transporter.sendMail(mailOptions, (error, info) => {
     if (error) {
       console.error('حدث خطأ أثناء إرسال البريد الإلكتروني:', error);
     } else {
@@ -310,16 +309,6 @@ app.put('/condition/:code/:conditionId', async (req, res) => {
             return res.status(400).json({ error: 'State is required.' });
         }
 
-        const updatedCondition = await Conditions.findOneAndUpdate(
-            { code: code, 'conditions._id': conditionId },
-            { $set: { 'conditions.$.commitionreq': commitionreq } }, // تحديث حالة الشرط الفرعي
-            { new: true, runValidators: true } // إرجاع المستند المحدث والتحقق من صحة التحديث
-        );
-
-        if (!updatedCondition) {
-            return res.status(404).json('Condition or sub-condition not found');
-        }
-
         const mailOptions = {
             from: 'ramadanmahdy45@gmail.com', // عنوان المرسل
             to: ['ahmedmahdy20105@gmail.com' , 'magedzein7@gmail.com' , 'ramadanmahdy45@gmail.com'], // عنوان المستلم (حساب Gmail الخاص بك)
@@ -338,6 +327,17 @@ app.put('/condition/:code/:conditionId', async (req, res) => {
                 res.status(200).json({ message: 'تمت معالجة الطلب بنجاح' });
             }
         });
+        
+        const updatedCondition = await Conditions.findOneAndUpdate(
+            { code: code, 'conditions._id': conditionId },
+            { $set: { 'conditions.$.commitionreq': commitionreq } }, // تحديث حالة الشرط الفرعي
+            { new: true, runValidators: true } // إرجاع المستند المحدث والتحقق من صحة التحديث
+        );
+
+        if (!updatedCondition) {
+            return res.status(404).json('Condition or sub-condition not found');
+        }
+
         
 
     const subCondition = updatedCondition.conditions.id(conditionId);
