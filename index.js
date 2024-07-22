@@ -322,20 +322,23 @@ app.put('/condition/:code/:conditionId', async (req, res) => {
 
         const mailOptions = {
             from: 'ramadanmahdy45@gmail.com', // عنوان المرسل
-            to: ['ahmedmahdy20105@gmail.com' , 'magedzein7@gmail.com' , "ramadanmahdy45@gmail.com"], // عنوان المستلم (حساب Gmail الخاص بك)
+            to: ['ahmedmahdy20105@gmail.com' , 'magedzein7@gmail.com' , 'ramadanmahdy45@gmail.com'], // عنوان المستلم (حساب Gmail الخاص بك)
             subject: `  طلب العموله من الكود :/${code}`, // موضوع البريد
             text: `  طلب العموله  بكود ${code}.`, // نص البريد
             html: `<p>تم إضافة طلب عموله جديد من الكود <strong>${code}</strong>.</p>` // محتوى HTML للبريد
         };
         
-// إرسال البريد الإلكتروني
-
-         await transporter.sendMail(mailOptions, (error, info) => {
-          if (error) {
-           console.error('حدث خطأ أثناء إرسال البريد الإلكتروني:', error);
-         } else {
-         console.log('تم إرسال البريد الإلكتروني بنجاح:', info.response);
-          }})
+        // إرسال البريد الإلكتروني
+        await transporter.sendMail(mailOptions, (error, info) => {
+            if (error) {
+                console.error('حدث خطأ أثناء إرسال البريد الإلكتروني:', error);
+                res.status(500).json({ message: 'فشل في إرسال البريد الإلكتروني' });
+            } else {
+                console.log('تم إرسال البريد الإلكتروني بنجاح:', info.response);
+                res.status(200).json({ message: 'تمت معالجة الطلب بنجاح' });
+            }
+        });
+        
 
     const subCondition = updatedCondition.conditions.id(conditionId);
 
