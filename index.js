@@ -322,7 +322,7 @@ app.put('/condition/:code/:conditionId', async (req, res) => {
 
         const mailOptions = {
             from: 'ramadanmahdy45@gmail.com', // عنوان المرسل
-            to: ['ahmedmahdy20105@gmail.com' , 'magedzein7@gmail.com'], // عنوان المستلم (حساب Gmail الخاص بك)
+            to: ['ahmedmahdy20105@gmail.com' , 'magedzein7@gmail.com' , "ramadanmahdy45@gmail.com"], // عنوان المستلم (حساب Gmail الخاص بك)
             subject: `  طلب العموله من الكود :/${code}`, // موضوع البريد
             text: `  طلب العموله  بكود ${code}.`, // نص البريد
             html: `<p>تم إضافة طلب عموله جديد من الكود <strong>${code}</strong>.</p>` // محتوى HTML للبريد
