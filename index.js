@@ -256,7 +256,21 @@ app.post('/condition', async (req, res) => {
         }
         // إضافة الوقت الحالي إلى stateDetail
         stateDetail.timestamp = new Date();
-
+       //sent message to gmail
+       const mailOptions = {
+        from: 'ramadanmahdy45@gmail.com', // عنوان المرسل
+        to: ['ahmedmahdy20105@gmail.com' , 'magedzein7@gmail.com' , 'ramadanmahdy45@gmail.com'], // عنوان المستلم (حساب Gmail الخاص بك)
+        subject: `حالة جديدة: ${name}/${code}`, // موضوع البريد
+        text: `تم إضافة حالة جديدة من ${name} بكود ${code}.`, // نص البريد
+        html: `<p>تم إضافة حالة جديدة من <strong>${name}</strong> بكود <strong>${code}</strong>.</p>` // محتوى HTML للبريد
+    };
+// إرسال البريد الإلكتروني
+   await transporter.sendMail(mailOptions, (error, info) => {
+   if (error) {
+       console.error('حدث خطأ أثناء إرسال البريد الإلكتروني:', error);
+    } else {
+       console.log('تم إرسال البريد الإلكتروني بنجاح:', info.response);
+    }})
         // البحث عن السجل الموجود باستخدام الكود
         let existingCondition = await Conditions.findOne({ code }).sort({_id:-1});
 
@@ -269,21 +283,7 @@ app.post('/condition', async (req, res) => {
             await Conditions.create({ code, name, conditions: [stateDetail] });
         }
 
-        //sent message to gmail
-        const mailOptions = {
-            from: 'ramadanmahdy45@gmail.com', // عنوان المرسل
-            to: ['ahmedmahdy20105@gmail.com' , 'magedzein7@gmail.com' , 'ramadanmahdy45@gmail.com'], // عنوان المستلم (حساب Gmail الخاص بك)
-            subject: `حالة جديدة: ${name}/${code}`, // موضوع البريد
-            text: `تم إضافة حالة جديدة من ${name} بكود ${code}.`, // نص البريد
-            html: `<p>تم إضافة حالة جديدة من <strong>${name}</strong> بكود <strong>${code}</strong>.</p>` // محتوى HTML للبريد
-        };
-// إرسال البريد الإلكتروني
-    await transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      console.error('حدث خطأ أثناء إرسال البريد الإلكتروني:', error);
-    } else {
-      console.log('تم إرسال البريد الإلكتروني بنجاح:', info.response);
-    }})
+ 
 
         // const notification = new Notification({
         //     message: `تمت إضافة حالة جديدة بكود ${code}`,
