@@ -47,7 +47,7 @@ const server = createServer(app);
 // });
 const corsOptions = {
     //https://royal-corner.vercel.app
-    origin: 'https://royal-corner.vercel.app',
+    origin: 'https://order-form-one.vercel.app/',
     optionsSuccessStatus: 200 // some legacy browsers (IE11, various SmartTVs) choke on 204
   }
   
